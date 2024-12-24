@@ -2,11 +2,12 @@ import { useState } from "react";
 import axios from "axios";
 
 function App() {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  
   const [inputValue, setInputValue] = useState("");
   const [formats, setFormats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [urlClass, setUrlClass] = useState("");
 
   const getEmbedUrl = (url) => {
     const videoId = url.split("v=")[1]?.split("&")[0];
@@ -19,6 +20,7 @@ function App() {
         videoUrl: url,
       });
       setFormats(response.data.formats);
+      setUrlClass(response.data.classUrl);
     } catch (error) {
       console.error("Error fetching formats:", error);
       setErrorMessage("Failed to fetch formats. Please try again.");
@@ -38,6 +40,7 @@ function App() {
       const response = await axios.post("http://localhost:3000/download", {
         videoUrl: inputValue,
         quality,
+        classUrl:urlClass
       });
 
       const link = document.createElement("a");

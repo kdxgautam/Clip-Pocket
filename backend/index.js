@@ -151,31 +151,24 @@ app.post("/download", async (req, res) => {
     return res.status(400).json({ error: "please select quality" });
   }
 
-  // if (isNaN(quality) || quality < 144 || quality > 2160) {
-  //   return res
-  //     .status(400)
-  //     .json({ error: "Invalid quality value. Must be between 144 and 2160." });
-  // }
 
   const timestamp = Date.now();
   const filePath = path.join(outputDir, `output-${timestamp}.mp4`);
   if (classUrl === "YTV") {
     try {
       const newUrl = normalizeYouTubeUrl(videoUrl);
-      const videoInfo = await getVideoInfo(newUrl);
+    const videoInfo = await getVideoInfo(newUrl);
 
-      await downloadVideo(newUrl, filePath, quality);
+    await downloadVideo(newUrl, filePath, quality);
 
-      const downloadUrl = `${req.protocol}://${req.get(
-        "host"
-      )}/output/output-${timestamp}.mp4`;
+    const downloadUrl = `${req.protocol}://${req.get("host")}/output/output-${timestamp}.mp4`;
 
-      res.status(200).json({
-        message: "Download complete.",
-        downloadUrl,
-        title: videoInfo.title,
-        videoUrl,
-      });
+    res.status(200).json({
+      message: "Download complete.",
+      downloadUrl,
+      title: videoInfo.title,
+      videoUrl,
+    });
     } catch (error) {
       console.error("Error during download:", error);
       res.status(500).json({
@@ -209,16 +202,25 @@ app.post("/download", async (req, res) => {
   }
 });
 
+
+
+
 // Function to download a video
 async function downloadVideo(videoUrl, outputPath, quality) {
   try {
+    if(quality === 'best'){
+      await youtubedl(videoUrl, {
+        output: outputPath,
+        format: `best`,
+        mergeOutputFormat: "mp4",
+      });
+    }else{
+
     await youtubedl(videoUrl, {
       output: outputPath,
-      format: (quality = "best")
-        ? `best`
-        : `bestvideo[height<=${quality}]+bestaudio/best`,
+      format: `bestvideo[height<=${quality}]+bestaudio/best`,
       mergeOutputFormat: "mp4",
-    });
+    });}
     console.log("Download complete!");
   } catch (error) {
     console.error("Error during video download:", error);
