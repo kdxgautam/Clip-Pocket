@@ -113,12 +113,10 @@ app.post("/formats", async (req, res) => {
         });
       }
     } else if (classUrl === "Fb") {
-      res
-        .status(200)
-        .json({
-          message: "Facebook video download not available for now",
-          classUrl: classUrl,
-        });
+      res.status(200).json({
+        message: "Facebook video download not available for now",
+        classUrl: classUrl,
+      });
     } else if (classUrl === "Other") {
       try {
         const videoInfo = await youtubedl(videoUrl, {
@@ -146,44 +144,68 @@ app.post("/formats", async (req, res) => {
 
 // Route to download a video
 app.post("/download", async (req, res) => {
-  const { videoUrl, quality } = req.body;
+  const { videoUrl, quality, classUrl } = req.body;
   console.log(quality);
 
-  if (!videoUrl) {
-    return res.status(400).json({ error: "Video URL is required." });
+  if (!videoUrl || !quality || !classUrl) {
+    return res.status(400).json({ error: "please select quality" });
   }
 
-  if (isNaN(quality) || quality < 144 || quality > 2160) {
-    return res
-      .status(400)
-      .json({ error: "Invalid quality value. Must be between 144 and 2160." });
-  }
+  // if (isNaN(quality) || quality < 144 || quality > 2160) {
+  //   return res
+  //     .status(400)
+  //     .json({ error: "Invalid quality value. Must be between 144 and 2160." });
+  // }
 
   const timestamp = Date.now();
   const filePath = path.join(outputDir, `output-${timestamp}.mp4`);
+  if (classUrl === "YTV") {
+    try {
+      const newUrl = normalizeYouTubeUrl(videoUrl);
+      const videoInfo = await getVideoInfo(newUrl);
 
-  try {
-    const newUrl = normalizeYouTubeUrl(videoUrl);
-    const videoInfo = await getVideoInfo(newUrl);
+      await downloadVideo(newUrl, filePath, quality);
 
-    await downloadVideo(newUrl, filePath, quality);
+      const downloadUrl = `${req.protocol}://${req.get(
+        "host"
+      )}/output/output-${timestamp}.mp4`;
 
-    const downloadUrl = `${req.protocol}://${req.get(
-      "host"
-    )}/output/output-${timestamp}.mp4`;
+      res.status(200).json({
+        message: "Download complete.",
+        downloadUrl,
+        title: videoInfo.title,
+        videoUrl,
+      });
+    } catch (error) {
+      console.error("Error during download:", error);
+      res.status(500).json({
+        error: "Failed to download video.",
+        details: error.message,
+      });
+    }
+  } else if (classUrl === "Other") {
+    try {
+      const videoInfo = await getVideoInfo(videoUrl);
 
-    res.status(200).json({
-      message: "Download complete.",
-      downloadUrl,
-      title: videoInfo.title,
-      videoUrl,
-    });
-  } catch (error) {
-    console.error("Error during download:", error);
-    res.status(500).json({
-      error: "Failed to download video.",
-      details: error.message,
-    });
+      await downloadVideo(videoUrl, filePath, quality);
+
+      const downloadUrl = `${req.protocol}://${req.get(
+        "host"
+      )}/output/output-${timestamp}.mp4`;
+
+      res.status(200).json({
+        message: "Download complete.",
+        downloadUrl,
+        title: videoInfo.title,
+        videoUrl,
+      });
+    } catch (error) {
+      console.error("Error during download:", error);
+      res.status(500).json({
+        error: "Failed to download video.",
+        details: error.message,
+      });
+    }
   }
 });
 
@@ -192,7 +214,9 @@ async function downloadVideo(videoUrl, outputPath, quality) {
   try {
     await youtubedl(videoUrl, {
       output: outputPath,
-      format: `bestvideo[height<=${quality}]+bestaudio/best`,
+      format: (quality = "best")
+        ? `best`
+        : `bestvideo[height<=${quality}]+bestaudio/best`,
       mergeOutputFormat: "mp4",
     });
     console.log("Download complete!");
@@ -256,7 +280,6 @@ function classifyUrl(url) {
     return "YTPL";
   } else if (patterns.youtubeVideo.test(url)) {
     return "YTV";
-
   } else if (patterns.facebook.test(url)) {
     return "Fb";
   } else if (patterns.other.test(url)) {
