@@ -30,97 +30,114 @@ app.use(
   (req, res, next) => {
     const filePath = path.join(outputDir, req.url);
     if (fs.existsSync(filePath)) {
-      res.setHeader("Content-Disposition", `attachment; filename=${path.basename(filePath)}`);
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=${path.basename(filePath)}`
+      );
     }
     next();
   },
   express.static(outputDir)
 );
 
-// Function to normalize YouTube URLs
-function normalizeYouTubeUrl(url) {
-  try {
-    const parsedUrl = new URL(url);
-    const videoId = parsedUrl.searchParams.get("v");
-
-    // If it's a playlist, return the video link with `v` parameter
-    if (parsedUrl.searchParams.get("list") && videoId) {
-      return `https://www.youtube.com/watch?v=${videoId}`;
-    }
-
-    // For short links (like youtu.be), extract video ID and construct the full URL
-    if (parsedUrl.hostname === "youtu.be" && parsedUrl.pathname.slice(1)) {
-      return `https://www.youtube.com/watch?v=${parsedUrl.pathname.slice(1)}`;
-    }
-
-    // Return the original URL if it's not a playlist or short link
-    return url;
-  } catch (error) {
-    console.error("Invalid URL:", error);
-    return null;
-  }
-}
-
-
-
-
-
-// Function to get video info
-const getVideoInfo = async (url) => {
-  try {
-    const info = await youtubedl(url, { dumpSingleJson: true });
-    return info;
-  } catch (error) {
-    console.error("Error fetching video info:", error);
-    throw new Error("Failed to fetch video information.");
-  }
-};
-
 // Route to get available formats
 app.post("/formats", async (req, res) => {
   const { videoUrl } = req.body;
-  const newUrl = normalizeYouTubeUrl(videoUrl);
 
   if (!videoUrl) {
     return res.status(400).json({ error: "videoUrl is required" });
   }
-
+  const classUrl = classifyUrl(videoUrl);
   try {
-    const videoInfo = await youtubedl(newUrl, {
-      dumpSingleJson: true,
-      noWarnings: true,
-    });
+    if (classUrl === "YTV") {
+      const newUrl = normalizeYouTubeUrl(videoUrl);
+      try {
+        const videoInfo = await youtubedl(newUrl, {
+          dumpSingleJson: true,
+          noWarnings: true,
+        });
 
-    const formats = videoInfo.formats
-      .filter((format) => format.height || format.resolution) // Ensure it's a video format
-      .map((format) => ({
-        formatId: format.format_id,
-        resolution: format.height || 0, // Default to 0 for non-video formats
-        ext: format.ext,
-        filesize: format.filesize || null,
-      }));
+        const availformat = await availformats(newUrl);
 
-    // Filter for major qualities and avoid duplicates
-    const majorQualities = [144, 360, 480, 1080];
-    const seenResolutions = new Set();
-
-    const uniqueFormats = formats.filter((format) => {
-      const resolution = format.resolution;
-      if (
-        (majorQualities.includes(resolution) || resolution > 1080) &&
-        !seenResolutions.has(resolution)
-      ) {
-        seenResolutions.add(resolution);
-        return true;
+        res.status(200).json({
+          videoUrl: newUrl,
+          title: videoInfo.title,
+          formats: availformat,
+          classUrl: classUrl,
+        });
+      } catch (error) {
+        console.error("Error fetching formats:", error);
+        res
+          .status(500)
+          .json({ error: "Failed to fetch youtube Video formats" });
       }
-      return false;
-    });
+    } else if (classUrl === "YTPL") {
+      try {
+        // Fetch playlist videos
+        const playlistInfo = await youtubedl(videoUrl, {
+          dumpSingleJson: true,
+          flatPlaylist: true,
+        });
 
+        const videos = playlistInfo.entries.map((entry) => ({
+          id: entry.id,
+          url: `https://www.youtube.com/watch?v=${entry.id}`,
+          title: entry.title,
+        }));
 
-    res.status(200).json({
-      title: videoInfo.title,
-      formats: uniqueFormats,
-    });
+        const downloadUrls = [];
+
+        // Download each video in the playlist
+        for (const video of videos) {
+          // console.log(video.url);
+
+          // await downloadVideo(video.url, outputPath, quality);
+          const availformat = await availformats(video.url);
+          console.log(availformat);
+
+          downloadUrls.push({
+            title: video.title,
+            url: video.url,
+            formats: availformat,
+          });
+        }
+
+        res.status(200).json({
+          playlist: downloadUrls,
+          classUrl: classUrl,
+        });
+      } catch (error) {
+        res.status(500).json({
+          error: "Failed to get playlist info",
+          details: error.message,
+        });
+      }
+    } else if (classUrl === "Fb") {
+      res
+        .status(200)
+        .json({
+          message: "Facebook video download not available for now",
+          classUrl: classUrl,
+        });
+    } else if (classUrl === "Other") {
+      try {
+        const videoInfo = await youtubedl(videoUrl, {
+          dumpSingleJson: true,
+          noWarnings: true,
+        });
+        const title = videoInfo.title;
+
+        res.status(200).json({ title: title, classUrl: classUrl });
+      } catch (error) {
+        console.error("Error fetching formats:", error);
+        res.status(500).json({ error: "Failed to fetch formats" });
+      }
+    } else {
+      res.status(400).json({ error: "Invalid URL" });
+    }
+    console.log(classUrl);
+    const newUrl = normalizeYouTubeUrl(videoUrl);
+    console.log(newUrl);
   } catch (error) {
     console.error("Error fetching formats:", error);
     res.status(500).json({ error: "Failed to fetch formats" });
@@ -130,14 +147,16 @@ app.post("/formats", async (req, res) => {
 // Route to download a video
 app.post("/download", async (req, res) => {
   const { videoUrl, quality } = req.body;
-  console.log(quality)
+  console.log(quality);
 
   if (!videoUrl) {
     return res.status(400).json({ error: "Video URL is required." });
   }
 
   if (isNaN(quality) || quality < 144 || quality > 2160) {
-    return res.status(400).json({ error: "Invalid quality value. Must be between 144 and 2160." });
+    return res
+      .status(400)
+      .json({ error: "Invalid quality value. Must be between 144 and 2160." });
   }
 
   const timestamp = Date.now();
@@ -149,7 +168,9 @@ app.post("/download", async (req, res) => {
 
     await downloadVideo(newUrl, filePath, quality);
 
-    const downloadUrl = `${req.protocol}://${req.get("host")}/output/output-${timestamp}.mp4`;
+    const downloadUrl = `${req.protocol}://${req.get(
+      "host"
+    )}/output/output-${timestamp}.mp4`;
 
     res.status(200).json({
       message: "Download complete.",
@@ -180,6 +201,105 @@ async function downloadVideo(videoUrl, outputPath, quality) {
     throw error;
   }
 }
+
+async function availformats(videoUrl) {
+  const videoInfo = await youtubedl(videoUrl, {
+    dumpSingleJson: true,
+    noWarnings: true,
+  });
+
+  const formats = videoInfo.formats
+    .filter((format) => format.height || format.resolution) // Ensure it's a video format
+    .map((format) => ({
+      formatId: format.format_id,
+      resolution: format.height || 0, // Default to 0 for non-video formats
+      ext: format.ext,
+      filesize: format.filesize || null,
+    }));
+
+  // Filter for major qualities and avoid duplicates
+  const majorQualities = [144, 360, 480, 1080];
+  const seenResolutions = new Set();
+
+  const uniqueFormats = formats.filter((format) => {
+    const resolution = format.resolution;
+    if (
+      (majorQualities.includes(resolution) || resolution > 1080) &&
+      !seenResolutions.has(resolution)
+    ) {
+      seenResolutions.add(resolution);
+      return true;
+    }
+    return false;
+  });
+
+  return uniqueFormats;
+}
+
+function classifyUrl(url) {
+  if (!url || typeof url !== "string") {
+    return "Invalid URL";
+  }
+
+  const patterns = {
+    youtubePlaylist:
+      /^(https?:\/\/)?(www\.)?(youtube\.com\/playlist\?list=|youtu\.be\/\?list=)/,
+    youtubeVideo:
+      /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)/,
+    // instagram: /^(https?:\/\/)?(www\.)?instagram\.com\/.+/,
+    // reddit: /^(https?:\/\/)?(www\.)?reddit\.com\/.+/,
+    facebook: /^(https?:\/\/)?(www\.)?facebook\.com\/.+/, // Matches any Facebook URL
+    other: /^https?:\/\/.+/, // Matches any other URL starting with "http" or "https"
+  };
+
+  if (patterns.youtubePlaylist.test(url)) {
+    return "YTPL";
+  } else if (patterns.youtubeVideo.test(url)) {
+    return "YTV";
+
+  } else if (patterns.facebook.test(url)) {
+    return "Fb";
+  } else if (patterns.other.test(url)) {
+    return "Other";
+  } else {
+    return "Inv";
+  }
+}
+
+// Function to normalize YouTube URLs
+function normalizeYouTubeUrl(url) {
+  try {
+    const parsedUrl = new URL(url);
+    const videoId = parsedUrl.searchParams.get("v");
+
+    // If it's a playlist, return the video link with `v` parameter
+    if (parsedUrl.searchParams.get("list") && videoId) {
+      return `https://www.youtube.com/watch?v=${videoId}`;
+    }
+
+    // For short links (like youtu.be), extract video ID and construct the full URL
+    if (parsedUrl.hostname === "youtu.be" && parsedUrl.pathname.slice(1)) {
+      return `https://www.youtube.com/watch?v=${parsedUrl.pathname.slice(1)}`;
+    }
+
+    // Return the original URL if it's not a playlist or short link
+    return url;
+  } catch (error) {
+    console.error("Invalid URL:", error);
+    return null;
+  }
+}
+
+// Function to get video info
+const getVideoInfo = async (url) => {
+  try {
+    const info = await youtubedl(url, { dumpSingleJson: true });
+    return info;
+  } catch (error) {
+    console.error("Error fetching video info:", error);
+    throw new Error("Failed to fetch video information.");
+  }
+};
 
 // Start the server
 app.listen(PORT, () => {
