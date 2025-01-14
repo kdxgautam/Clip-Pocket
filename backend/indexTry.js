@@ -1,39 +1,39 @@
 
 
-// const youtubedl = require('youtube-dl-exec');
-// const fs = require('fs');
+import youtubedl, { exec } from 'youtube-dl-exec';
+import { writeFileSync } from 'fs';
 
-// // Get video info from the provided URL
-// const getInfo = (url, flags) =>
-//   youtubedl(url, { dumpSingleJson: true, ...flags });
+// Get video info from the provided URL
+const getInfo = (url, flags) =>
+  youtubedl(url, { dumpSingleJson: true, ...flags });
 
-// // Load video info from a JSON file and pass it to youtube-dl for further actions
-// const fromInfo = (infoFile, flags) =>
-//   youtubedl.exec('', { loadInfoJson: infoFile, ...flags });
+// Load video info from a JSON file and pass it to youtube-dl for further actions
+const fromInfo = (infoFile, flags) =>
+  exec('', { loadInfoJson: infoFile, ...flags });
 
-// async function main(url) {
-//   // Fetch video information
-//   const info = await getInfo(url);
+async function main(url) {
+  // Fetch video information
+  const info = await getInfo(url);
 
-//   // Save the video information into a JSON file
-//   fs.writeFileSync('videoInfo.json', JSON.stringify(info));
+  // Save the video information into a JSON file
+  writeFileSync('videoInfo.json', JSON.stringify(info));
 
-//   // Log video description
-//   console.log(info.description);
+  // Log video description
+  console.log(info.description);
 
-//   // Log available thumbnails
-//   console.log((await fromInfo('videoInfo.json', { listThumbnails: true })).stdout);
+  // Log available thumbnails
+  console.log((await fromInfo('videoInfo.json', { listThumbnails: true })).stdout);
 
-//   // Download video with both audio and video merged
-//   await fromInfo('videoInfo.json', {
-//     output: 'output.mp4',     // Output file name
-//     format: 'bestvideo', // Merge best video and best audio
-//   // Ensure the output format is mp4
-//   });
-// }
+  // Download video with both audio and video merged
+  await fromInfo('videoInfo.json', {
+    output: 'output.mp4',     // Output file name
+    format: 'bestvideo', // Merge best video and best audio
+  // Ensure the output format is mp4
+  });
+}
 
-// // Run the script with a YouTube URL
-// main("https://www.youtube.com/watch?v=LDU_Txk06tM");
+// Run the script with a YouTube URL
+main("https://www.youtube.com/watch?v=LDU_Txk06tM");
 
 
 

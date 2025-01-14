@@ -12,7 +12,12 @@ export default {
         'xs': '445px', 
         '3xl': '1920px',     // Custom extra large breakpoint
       },
+      backgroundImage: {
+        'custom-bg': "url('/bgf/bg2.jpg')",
+      },
     },
   },
-  plugins: [],
+  plugins: [
+    import('daisyui'),
+  ],
 }

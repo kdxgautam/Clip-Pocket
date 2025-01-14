@@ -3,6 +3,7 @@ import youtubedl from "youtube-dl-exec";
 import fs from "fs";
 import path from "path";
 import cors from "cors";
+import axios from "axios";
 
 const app = express();
 const PORT = 3000;
@@ -24,6 +25,11 @@ if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir, { recursive: true });
 }
 
+const thumbnailsDir = path.resolve("./thumbnails");
+      if (!fs.existsSync(thumbnailsDir)) {
+        fs.mkdirSync(thumbnailsDir, { recursive: true });
+      }
+
 // Serve the output folder statically
 app.use(
   "/output",
@@ -39,6 +45,8 @@ app.use(
   },
   express.static(outputDir)
 );
+app.use("/thumbnails", express.static(thumbnailsDir));
+
 
 // Route to get available formats
 app.post("/formats", async (req, res) => {
@@ -118,14 +126,39 @@ app.post("/formats", async (req, res) => {
         classUrl: classUrl,
       });
     } else if (classUrl === "Other") {
+      
       try {
         const videoInfo = await youtubedl(videoUrl, {
           dumpSingleJson: true,
           noWarnings: true,
         });
         const title = videoInfo.title;
+        const thumbnailUrl = videoInfo.thumbnail;
 
-        res.status(200).json({ title: title, classUrl: classUrl });
+        // Download the thumbnail
+        const response = await axios.get(thumbnailUrl, {
+          responseType: "stream",
+        });
+
+        const timestamp = Date.now();
+        const fileName = `thumbnail-${timestamp}.jpg`;
+        const filePath = path.join(thumbnailsDir, fileName);
+
+        const writer = fs.createWriteStream(filePath);
+
+        response.data.pipe(writer);
+        writer.on("finish", () => {
+          const thumbnailPath = `${req.protocol}://${req.get(
+            "host"
+          )}/thumbnails/${fileName}`;
+          console.log(thumbnailPath);
+
+          res.status(200).json({
+            title: title,
+            classUrl: classUrl,
+            thumbnailUrl: thumbnailPath,
+          });
+        });
       } catch (error) {
         console.error("Error fetching formats:", error);
         res.status(500).json({ error: "Failed to fetch formats" });
@@ -144,31 +177,32 @@ app.post("/formats", async (req, res) => {
 
 // Route to download a video
 app.post("/download", async (req, res) => {
-  const { videoUrl, quality, classUrl } = req.body;
+  const { videoUrl, quality = "best", classUrl } = req.body;
   console.log(quality);
 
   if (!videoUrl || !quality || !classUrl) {
     return res.status(400).json({ error: "please select quality" });
   }
 
-
   const timestamp = Date.now();
   const filePath = path.join(outputDir, `output-${timestamp}.mp4`);
-  if (classUrl === "YTV") {
+  if (classUrl === "YTV" || classUrl === "YTPL") {
     try {
       const newUrl = normalizeYouTubeUrl(videoUrl);
-    const videoInfo = await getVideoInfo(newUrl);
+      const videoInfo = await getVideoInfo(newUrl);
 
-    await downloadVideo(newUrl, filePath, quality);
+      await downloadVideo(newUrl, filePath, quality);
 
-    const downloadUrl = `${req.protocol}://${req.get("host")}/output/output-${timestamp}.mp4`;
+      const downloadUrl = `${req.protocol}://${req.get(
+        "host"
+      )}/output/output-${timestamp}.mp4`;
 
-    res.status(200).json({
-      message: "Download complete.",
-      downloadUrl,
-      title: videoInfo.title,
-      videoUrl,
-    });
+      res.status(200).json({
+        message: "Download complete.",
+        downloadUrl,
+        title: videoInfo.title,
+        videoUrl,
+      });
     } catch (error) {
       console.error("Error during download:", error);
       res.status(500).json({
@@ -202,25 +236,22 @@ app.post("/download", async (req, res) => {
   }
 });
 
-
-
-
 // Function to download a video
 async function downloadVideo(videoUrl, outputPath, quality) {
   try {
-    if(quality === 'best'){
+    if (quality === "best") {
       await youtubedl(videoUrl, {
         output: outputPath,
         format: `best`,
         mergeOutputFormat: "mp4",
       });
-    }else{
-
-    await youtubedl(videoUrl, {
-      output: outputPath,
-      format: `bestvideo[height<=${quality}]+bestaudio/best`,
-      mergeOutputFormat: "mp4",
-    });}
+    } else {
+      await youtubedl(videoUrl, {
+        output: outputPath,
+        format: `bestvideo[height<=${quality}]+bestaudio/best`,
+        mergeOutputFormat: "mp4",
+      });
+    }
     console.log("Download complete!");
   } catch (error) {
     console.error("Error during video download:", error);
