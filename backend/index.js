@@ -1,19 +1,22 @@
 import express from "express";
 import youtubedl from "youtube-dl-exec";
+
 import fs from "fs";
 import path from "path";
 import cors from "cors";
 import axios from "axios";
+import { spawn } from "child_process";
+import { PassThrough } from "stream";
 
 const app = express();
-const PORT = 3000;
+const PORT = 4000;
 
 // Middleware configuration
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
-    origin: "http://localhost:5173", // Allow only your React app's origin
+    origin: ["http://localhost:5173","http://localhost:5174"], // Allow only your React app's origin
     methods: ["GET", "POST"], // Allow specific HTTP methods
   })
 );
@@ -25,10 +28,7 @@ if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir, { recursive: true });
 }
 
-const thumbnailsDir = path.resolve("./thumbnails");
-      if (!fs.existsSync(thumbnailsDir)) {
-        fs.mkdirSync(thumbnailsDir, { recursive: true });
-      }
+
 
 // Serve the output folder statically
 app.use(
@@ -45,6 +45,11 @@ app.use(
   },
   express.static(outputDir)
 );
+
+const thumbnailsDir = path.resolve("./thumbnails");
+      if (!fs.existsSync(thumbnailsDir)) {
+        fs.mkdirSync(thumbnailsDir, { recursive: true });
+      }
 app.use("/thumbnails", express.static(thumbnailsDir));
 
 
@@ -235,6 +240,12 @@ app.post("/download", async (req, res) => {
     }
   }
 });
+
+// import { spawn } from 'child_process';
+// import { PassThrough } from 'stream';
+
+
+
 
 // Function to download a video
 async function downloadVideo(videoUrl, outputPath, quality) {

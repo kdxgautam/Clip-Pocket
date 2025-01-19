@@ -1,3 +1,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.container {
+    background-color:#171717; /* Light cyan */
+    min-height: 100vh;
+   
+    min-width: fit-content;
+  }
