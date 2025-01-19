@@ -16,7 +16,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
-    origin: ["http://localhost:5173","http://localhost:5174"], // Allow only your React app's origin
+    origin: ["http://localhost:5173","http://localhost:5174",'https://your-frontend.onrender.com'], // Allow only your React app's origin
     methods: ["GET", "POST"], // Allow specific HTTP methods
   })
 );

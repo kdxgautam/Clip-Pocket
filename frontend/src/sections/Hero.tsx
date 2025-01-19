@@ -2,7 +2,7 @@ import React, { useState, useCallback } from "react";
 import { Download, Loader, AlertCircle } from "lucide-react";
 import PlaceholderBox from "../components/PlaceholderBox";
 
-const PORT:number = 4000;
+// const PORT:number = 4000;
 
 interface Format {
   resolution: string;
@@ -69,7 +69,7 @@ const Hero = () => {
         setErrorMessage("");
         setLoading(true);
 
-        const response = await fetch(`http://localhost:${PORT}/formats`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/formats`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -129,7 +129,7 @@ const Hero = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:4000/download', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/download`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
