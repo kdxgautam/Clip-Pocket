@@ -1,22 +1,35 @@
 import express from "express";
-import youtubedl from "youtube-dl-exec";
 
+import youtubedl from "youtube-dl-exec";
 import fs from "fs";
 import path from "path";
 import cors from "cors";
 import axios from "axios";
-import { spawn } from "child_process";
-import { PassThrough } from "stream";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 const app = express();
 const PORT = 4000;
 
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per window
+  message: "Too many requests from this IP, please try again later.",
+});
+
+
 // Middleware configuration
+app.use(limiter);
+app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
-    origin: ["http://localhost:5173","http://localhost:5174",'https://your-frontend.onrender.com'], // Allow only your React app's origin
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+
+    ], // Allow only your React app's origin
     methods: ["GET", "POST"], // Allow specific HTTP methods
   })
 );
@@ -28,30 +41,44 @@ if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir, { recursive: true });
 }
 
-
-
 // Serve the output folder statically
 app.use(
   "/output",
   (req, res, next) => {
     const filePath = path.join(outputDir, req.url);
+    if (!filePath.startsWith(outputDir)) {
+      return res.status(403).send("Access denied");
+    }
+
     if (fs.existsSync(filePath)) {
+      // Set headers to prompt download
       res.setHeader(
         "Content-Disposition",
         `attachment; filename=${path.basename(filePath)}`
       );
+
+      // Schedule file deletion after 5 minutes
+      setTimeout(() => {
+        if (fs.existsSync(filePath)) {
+          fs.unlink(filePath, (err) => {
+            if (err) console.error(`Failed to delete file ${filePath}:`, err);
+            else console.log(`Deleted file: ${filePath}`);
+          });
+        }
+      }, 5 * 60 * 1000); // 5 minutes
     }
+
     next();
   },
   express.static(outputDir)
 );
 
-const thumbnailsDir = path.resolve("./thumbnails");
-      if (!fs.existsSync(thumbnailsDir)) {
-        fs.mkdirSync(thumbnailsDir, { recursive: true });
-      }
-app.use("/thumbnails", express.static(thumbnailsDir));
 
+const thumbnailsDir = path.resolve("./thumbnails");
+if (!fs.existsSync(thumbnailsDir)) {
+  fs.mkdirSync(thumbnailsDir, { recursive: true });
+}
+app.use("/thumbnails", express.static(thumbnailsDir));
 
 // Route to get available formats
 app.post("/formats", async (req, res) => {
@@ -60,6 +87,10 @@ app.post("/formats", async (req, res) => {
   if (!videoUrl) {
     return res.status(400).json({ error: "videoUrl is required" });
   }
+
+  // if (!videoUrl || !isURL(videoUrl)) {
+  //   return res.status(400).json({ error: "Invalid video URL provided." });
+  // }
   const classUrl = classifyUrl(videoUrl);
   try {
     if (classUrl === "YTV") {
@@ -131,7 +162,6 @@ app.post("/formats", async (req, res) => {
         classUrl: classUrl,
       });
     } else if (classUrl === "Other") {
-      
       try {
         const videoInfo = await youtubedl(videoUrl, {
           dumpSingleJson: true,
@@ -164,6 +194,14 @@ app.post("/formats", async (req, res) => {
             thumbnailUrl: thumbnailPath,
           });
         });
+        setTimeout(() => {
+          if (fs.existsSync(thumbnailPath)) {
+            fs.unlink(thumbnailPath, (err) => {
+              if (err) console.error(`Failed to delete file ${thumbnailPath}:`, err);
+              else console.log(`Deleted file: ${thumbnailPath}`);
+            });
+          }
+        }, 1 * 60 * 100); // 10 minutes
       } catch (error) {
         console.error("Error fetching formats:", error);
         res.status(500).json({ error: "Failed to fetch formats" });
@@ -208,6 +246,14 @@ app.post("/download", async (req, res) => {
         title: videoInfo.title,
         videoUrl,
       });
+      setTimeout(() => {
+        if (fs.existsSync(filePath)) {
+          fs.unlink(filePath, (err) => {
+            if (err) console.error(`Failed to delete file ${filePath}:`, err);
+            else console.log(`Deleted file: ${filePath}`);
+          });
+        }
+      }, 1 * 60 * 100); // 10 minutes
     } catch (error) {
       console.error("Error during download:", error);
       res.status(500).json({
@@ -231,6 +277,14 @@ app.post("/download", async (req, res) => {
         title: videoInfo.title,
         videoUrl,
       });
+      setTimeout(() => {
+        if (fs.existsSync(filePath)) {
+          fs.unlink(filePath, (err) => {
+            if (err) console.error(`Failed to delete file ${filePath}:`, err);
+            else console.log(`Deleted file: ${filePath}`);
+          });
+        }
+      }, 10 * 60 * 1000); // 10 minutes
     } catch (error) {
       console.error("Error during download:", error);
       res.status(500).json({
@@ -243,9 +297,6 @@ app.post("/download", async (req, res) => {
 
 // import { spawn } from 'child_process';
 // import { PassThrough } from 'stream';
-
-
-
 
 // Function to download a video
 async function downloadVideo(videoUrl, outputPath, quality) {
