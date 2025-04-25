@@ -13,7 +13,7 @@ interface NavigationHeaderProps {
 
 const Navbar: React.FC<NavigationHeaderProps> = ({
   className = '',
-  brandText = 'YT Downloader'
+  brandText = 'Clip Pocket'
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);

@@ -49,11 +49,15 @@ const Hero = () => {
     setLoading(false);
   }, []);
 
+
+  // Function to extract video ID from URL and return the embed URL
   const getEmbedUrl = useCallback((url: string): string => {
     const videoId = url.split("v=")[1]?.split("&")[0];
     return videoId ? `https://www.youtube.com/embed/${videoId}` : "";
   }, []);
 
+  // Function to handle input change
+  // and reset state if the URL changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const url = e.target.value.trim();
     setInputValue(url);
@@ -82,6 +86,7 @@ const Hero = () => {
         }
 
         const data: ApiResponse = await response.json();
+        console.log("API Response:", data);
 
         switch (data.classUrl) {
           case "YTPL":
@@ -175,11 +180,11 @@ const Hero = () => {
             {/* Header */}
             <div className="space-y-4">
               <h1 className="text-4xl md:text-6xl font-bold text-white leading-tight">
-                Download YouTube Videos{" "}
+                Download  Videos {" "}
                 <span className="text-red-500">Instantly</span>
               </h1>
               <p className="text-xl text-gray-300">
-                Fast, free, and easy-to-use YouTube video downloader. Download
+                Fast, free, and easy-to-use Online video downloader. Download
                 single videos or entire playlists in HD quality.
               </p>
             </div>
