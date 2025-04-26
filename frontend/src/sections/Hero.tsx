@@ -35,7 +35,7 @@ const Hero = () => {
   const [thumbnail, setThumbnail] = useState("");
   const [activeVideo, setActiveVideo] = useState(0);
 
-  const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
   const resetState = useCallback(() => {
     setFormats([]);
