@@ -9,8 +9,6 @@ interface Format {
   formatId?: string;
 }
 
-
-
 interface PlaylistVideo {
   title: string;
   url: string;
@@ -37,6 +35,7 @@ const Hero = () => {
   const [thumbnail, setThumbnail] = useState("");
   const [activeVideo, setActiveVideo] = useState(0);
 
+  const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 
   const resetState = useCallback(() => {
     setFormats([]);
@@ -48,7 +47,6 @@ const Hero = () => {
     setErrorMessage("");
     setLoading(false);
   }, []);
-
 
   // Function to extract video ID from URL and return the embed URL
   const getEmbedUrl = useCallback((url: string): string => {
@@ -73,7 +71,9 @@ const Hero = () => {
         setErrorMessage("");
         setLoading(true);
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/formats`, {
+        
+
+        const response = await fetch(`${API_URL}/formats`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -115,17 +115,20 @@ const Hero = () => {
         setLoading(false);
       }
     },
-    [resetState]
+    [resetState, API_URL]
   );
 
-  const handleDownload = async (quality: string, videoUrl: string = inputValue) => {
+  const handleDownload = async (
+    quality: string,
+    videoUrl: string = inputValue
+  ) => {
     if (!videoUrl.trim()) {
-      setErrorMessage('Please enter a URL.');
+      setErrorMessage("Please enter a URL.");
       return;
     }
 
     setLoading(true);
-    setErrorMessage('');
+    setErrorMessage("");
 
     try {
       if (!urlClass) {
@@ -134,10 +137,12 @@ const Hero = () => {
         return;
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/download`, {
-        method: 'POST',
+     
+
+      const response = await fetch(`${API_URL}/download`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           videoUrl,
@@ -147,29 +152,28 @@ const Hero = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Download failed');
+        throw new Error("Download failed");
       }
 
       const data: ApiResponse = await response.json();
 
       if (data.downloadUrl) {
-        const link = document.createElement('a');
+        const link = document.createElement("a");
         link.href = data.downloadUrl;
-        link.setAttribute('download', 'video.mp4');
+        link.setAttribute("download", "video.mp4");
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
       } else {
-        throw new Error('Download URL not found');
+        throw new Error("Download URL not found");
       }
     } catch (error) {
-      console.error('Error during download:', error);
-      setErrorMessage('Failed to download video. Please try again later.');
+      console.error("Error during download:", error);
+      setErrorMessage("Failed to download video. Please try again later.");
     } finally {
       setLoading(false);
     }
   };
-
 
   return (
     <div className="min-h-screen bg-neutral-900 flex items-start justify-center pt-40 sm:pt-44">
@@ -180,8 +184,7 @@ const Hero = () => {
             {/* Header */}
             <div className="space-y-4">
               <h1 className="text-4xl md:text-6xl font-bold text-white leading-tight">
-                Download  Videos {" "}
-                <span className="text-red-500">Instantly</span>
+                Download Videos <span className="text-red-500">Instantly</span>
               </h1>
               <p className="text-xl text-gray-300">
                 Fast, free, and easy-to-use Online video downloader. Download
@@ -412,7 +415,6 @@ const Hero = () => {
           </div>
         </div>
       </div>
-      
     </div>
   );
 };

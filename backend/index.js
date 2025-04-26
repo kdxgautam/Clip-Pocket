@@ -7,6 +7,9 @@ import cors from "cors";
 import axios from "axios";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import dotenv from "dotenv";
+
+
 
 import { classifyUrl, normalizeYouTubeUrl } from "./helpers/Urlhelpers.js";
 import { availformats,getVideoInfo } from "./helpers/Videohelpers.js";
@@ -14,7 +17,8 @@ import { downloadVideo } from "./helpers/downloader.js";
 
 
 const app = express();
-const PORT = 4000;
+const PORT = process.env.PORT || 4000;
+dotenv.config();
 
 // Middleware to limit the number of requests from a single IP
 // This helps prevent abuse and DoS attacks
@@ -34,11 +38,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:5174",
+    origin: 
+       process.env.ALLOWED_ORIGIN.split(",")
 
-    ], // Allow only your React app's origin
+    , // Allow only your React app's origin
     methods: ["GET", "POST"], // Allow specific HTTP methods
   })
 );
