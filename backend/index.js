@@ -36,10 +36,11 @@ app.use(limiter);
 app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
 app.use(
   cors({
     origin: 
-       process.env.ALLOWED_ORIGIN.split(",")
+       [process.env.ALLOWED_ORIGIN]
 
     , // Allow only your React app's origin
     methods: ["GET", "POST"], // Allow specific HTTP methods
