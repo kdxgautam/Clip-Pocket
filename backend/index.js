@@ -41,7 +41,7 @@ app.use(
   cors({
     origin: 
        [process.env.ALLOWED_ORIGIN]
-
+   
     , // Allow only your React app's origin
     methods: ["GET", "POST"], // Allow specific HTTP methods
   })
@@ -87,11 +87,17 @@ app.use(
 );
 
 
+
 const thumbnailsDir = path.resolve("./thumbnails");
 if (!fs.existsSync(thumbnailsDir)) {
   fs.mkdirSync(thumbnailsDir, { recursive: true });
 }
-app.use("/thumbnails",express.static(thumbnailsDir));
+
+app.use("/thumbnails", (req, res, next) => {
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  next();
+}, express.static(thumbnailsDir));
+
 
 // Route to get available formats
 app.post("/formats", async (req, res) => {
@@ -207,14 +213,14 @@ app.post("/formats", async (req, res) => {
             thumbnailUrl: thumbnailPath,
           });
         });
-        setTimeout(() => {
-          if (fs.existsSync(thumbnailPath)) {
-            fs.unlink(thumbnailPath, (err) => {
-              if (err) console.error(`Failed to delete file ${thumbnailPath}:`, err);
-              else console.log(`Deleted file: ${thumbnailPath}`);
-            });
-          }
-        }, 1 * 60 * 100); // 10 minutes
+        // setTimeout(() => {
+        //   if (fs.existsSync(thumbnailPath)) {
+        //     fs.unlink(thumbnailPath, (err) => {
+        //       if (err) console.error(`Failed to delete file ${thumbnailPath}:`, err);
+        //       else console.log(`Deleted file: ${thumbnailPath}`);
+        //     });
+        //   }
+        // }, 1 * 60 * 100); // 10 minutes
       } catch (error) {
         console.error("Error fetching formats:", error);
         res.status(500).json({ error: "Failed to fetch formats" });
