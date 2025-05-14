@@ -26,9 +26,9 @@ const Footer: React.FC = () => {
 
   const legalLinks = [
     { href: '#privacyPolicy', text: 'Privacy Policy' },
-    { href: '#', text: 'Terms of Service' },
-    { href: '#', text: 'DMCA' },
-    { href: '#', text: 'Copyright' }
+    { href: '#term', text: 'Terms of Service' },
+    { href: '#dmca', text: 'DMCA' },
+    { href: '#copyright', text: 'Copyright' }
   ];
 
   return (
@@ -50,7 +50,7 @@ const Footer: React.FC = () => {
         <FooterSection title="Quick Links" animationDelay="0.2s">
           <ul className="space-y-2">
             {quickLinks.map((link) => (
-              <li key={link.href}>
+              <li key={`${link.href}quick`}>
                 <FooterLink href={link.href}>{link.text}</FooterLink>
               </li>
             ))}
@@ -61,7 +61,7 @@ const Footer: React.FC = () => {
         <FooterSection title="Legal" animationDelay="0.4s">
           <ul className="space-y-2">
             {legalLinks.map((link) => (
-              <li key={link.href}>
+              <li key={`${link.href}legal`}>
                 <FooterLink href={link.href}>{link.text}</FooterLink>
               </li>
             ))}

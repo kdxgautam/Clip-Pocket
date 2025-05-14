@@ -16,9 +16,11 @@ import { availformats,getVideoInfo } from "./helpers/Videohelpers.js";
 import { downloadVideo } from "./helpers/downloader.js";
 
 
+dotenv.config();
+
 const app = express();
 const PORT = process.env.PORT || 4000;
-dotenv.config();
+
 
 // Middleware to limit the number of requests from a single IP
 // This helps prevent abuse and DoS attacks

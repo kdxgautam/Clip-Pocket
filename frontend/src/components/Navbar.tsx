@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Menu, X, Youtube, Github } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Menu, X, Youtube, Github } from "lucide-react";
 
 interface NavLink {
   href: string;
@@ -9,51 +9,60 @@ interface NavLink {
 interface NavigationHeaderProps {
   className?: string;
   brandText?: string;
+  onLinkClick: (section: string) => void;
 }
 
 const Navbar: React.FC<NavigationHeaderProps> = ({
-  className = '',
-  brandText = 'Clip Pocket'
+  className = "",
+  brandText = "Clip Pocket",
+  onLinkClick,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   const navLinks: NavLink[] = [
-    
-    { href: '#features', text: 'Features' },
-    { href: '#howItWorks', text: 'How It Works' },
+    { href: "features", text: "Features" },
+    { href: "howItWorks", text: "How It Works" },
   ];
 
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   return (
-    <nav className={`fixed w-full z-50 transition-all duration-300 ${
-      scrolled ? 'bg-neutral-900/95 backdrop-blur-sm shadow-lg' : 'bg-transparent'
-    } ${className}`}>
+    <nav
+      className={`fixed w-full z-50 transition-all duration-300 ${
+        scrolled
+          ? "bg-neutral-900/95 backdrop-blur-sm shadow-lg"
+          : "bg-transparent"
+      } ${className}`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <div className="flex-shrink-0 flex items-center space-x-2">
+          <div className="flex-shrink-0 flex items-center space-x-2 cursor-pointer">
+            <button onClick={()=>onLinkClick('clip-pocket')} >
             <Youtube className="h-7 w-7 text-red-500" />
-            <a href="#" className="text-2xl font-bold text-white">
+            </button>
+            <button onClick={()=>onLinkClick('clip-pocket')}
+             className="text-2xl font-bold text-white">
               {brandText}
-            </a>
+            </button>
           </div>
-          
+
           <div className="hidden lg:flex lg:items-center lg:space-x-4">
             {navLinks.map((link) => (
-              <a
+              <button
                 key={link.href}
-                href={link.href}
+                onClick={() => onLinkClick?.(link.href)}
                 className="text-gray-200 hover:bg-neutral-700/50 hover:text-white px-4 py-2 rounded-md text-base font-medium transition-all duration-200"
               >
                 {link.text}
-              </a>
+              </button>
             ))}
             <a
               href="https://github.com"
@@ -73,26 +82,35 @@ const Navbar: React.FC<NavigationHeaderProps> = ({
               aria-expanded={isMobileMenuOpen}
               aria-label="Toggle navigation menu"
             >
-              {isMobileMenuOpen ? <X className="h-7 w-7" /> : <Menu className="h-7 w-7" />}
+              {isMobileMenuOpen ? (
+                <X className="h-7 w-7" />
+              ) : (
+                <Menu className="h-7 w-7" />
+              )}
             </button>
           </div>
         </div>
 
         {/* Mobile menu */}
-        <div className={`lg:hidden transition-all duration-300 ${
-          isMobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-        } overflow-hidden`}>
+        <div
+          className={`lg:hidden transition-all duration-300 ${
+            isMobileMenuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+          } overflow-hidden`}
+        >
           <div className="px-2 pt-2 pb-3 space-y-2 bg-neutral-800/90 backdrop-blur-sm rounded-lg mt-2">
             {navLinks.map((link) => (
-              <a
+              <button
                 key={link.href}
-                href={link.href}
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  onLinkClick?.(link.href);
+                }}
                 className="text-gray-100 hover:bg-neutral-700 block px-4 py-3 rounded-md text-lg font-medium transition-all duration-200"
-                onClick={() => setIsMobileMenuOpen(false)}
               >
                 {link.text}
-              </a>
+              </button>
             ))}
+
             <a
               href="https://github.com"
               target="_blank"

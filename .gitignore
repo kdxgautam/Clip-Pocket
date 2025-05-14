@@ -6,3 +6,6 @@ videoInfo.json
 file.jsx
 testIndex.js
 thumbnails
+env
+backend/.env
+frontend/.env
